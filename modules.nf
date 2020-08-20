@@ -235,11 +235,9 @@ process COVERAGE_OUTPUT {
     path coverage
 
   output:
-    path "coverage.txt"
     path "coverage.tsv"
 
   """
-  cat $coverage > coverage.txt
   awk '(NR == 1) || (FNR > 1)' $coverage > coverage.tsv
   """
 }
@@ -259,8 +257,7 @@ process CALL_VARIANTS {
     tuple val(id), path(bam), path(bai)
     val haplotypecaller_option
  
-  output: 
-    // tuple path("${id}.g.vcf.gz"), path("${id}.g.vcf.gz.tbi")
+  output:
     path "${id}.g.vcf.gz", emit: vcf
     path "${id}.g.vcf.gz.tbi", emit: vcf_tbi
 

@@ -4,68 +4,67 @@
 
 
 /*
- * Step 1a: Create a FASTA genome index (.fai) with samtools for GATK
+ * Step 0a: Create a FASTA ref_genome index (.fai) with samtools for GATK
  */
 process PREPARE_GENOME_SAMTOOLS { 
-  tag "$genome.baseName"
+  tag "$ref_genome.baseName"
  
   input: 
-    path genome
+    path ref_genome
  
   output: 
-    path "${genome}.fai"
+    path "${ref_genome}.fai"
   
   script:
   """
-  samtools faidx $genome
+  samtools faidx $ref_genome
   """
 }
 
 
 /*
- * Step 1b: Create a FASTA genome index with bwa for bwa
+ * Step 0b: Create a FASTA ref_genome index with bwa for bwa
  */
 process PREPARE_GENOME_BWA { 
-  tag "$genome.baseName"
+  tag "$ref_genome.baseName"
  
   input: 
-    path genome
+    path ref_genome
  
   output: 
-    path "${genome}.*"
+    path "${ref_genome}.*"
   
   script:
   """
-  bwa index -a is $genome
+  bwa index -a is $ref_genome
   """
 }
 
 
 /*
- * Step 1c: Create a FASTA genome sequence dictionary with Picard for GATK
+ * Step 0c: Create a FASTA ref_genome sequence dictionary with Picard for GATK
  */
 process PREPARE_GENOME_PICARD {
-  tag "$genome.baseName"
+  tag "$ref_genome.baseName"
 
   input:
-    path genome
+    path ref_genome
 
   output:
-    path "${genome.baseName}.dict"
+    path "${ref_genome.baseName}.dict"
 
   script:
   """
-  gatk CreateSequenceDictionary -R $genome -O ${genome.baseName}.dict
+  gatk CreateSequenceDictionary -R $ref_genome -O ${ref_genome.baseName}.dict
   """
 }
 
 
 /*
- * Step 2a: Read QC before trimming using fastqc
+ * Step 1a: Read QC before trimming using fastqc
  */
 process FASTQC_BEFORE_TRIM {
   tag "$id"
-  publishDir "$params.results/fastqc_before", mode: 'copy'
 
   input:
     tuple val(id), path(reads)
@@ -80,7 +79,7 @@ process FASTQC_BEFORE_TRIM {
 
 
 /*
- * Step 2b: Summarise fastqc results using multiqc
+ * Step 1b: Summarise fastqc results using multiqc
  */
 process MULTIQC_FASTQC_BEFORE_TRIM {
   publishDir "$params.results/multiqc_fastqc", mode: 'copy'
@@ -100,17 +99,16 @@ process MULTIQC_FASTQC_BEFORE_TRIM {
 
 
 /*
- * Step 2c. Trim adapters and low quality reads
+ * Step 1c. Trim adapters and low quality reads
  */
 process TRIM {
   tag "$id"
-  publishDir "$params.results/trim", mode: 'copy'
   errorStrategy 'ignore'
 
   input:
     tuple val(id), path(reads)
     path adapter
-    val trim_option
+    val trimming_option
 
   output:
     tuple val(id), path("*_paired.fastq.gz")
@@ -121,17 +119,16 @@ process TRIM {
     ${id}_2_paired.fastq.gz ${id}_2_unpaired.fastq.gz \
     ILLUMINACLIP:$adapter/TruSeq3-PE-2.fa:2:30:10 \
     ILLUMINACLIP:$adapter/NexteraPE-PE.fa:2:30:10 \
-    ${trim_option}
+    ${trimming_option}
   """
 }
 
 
 /*
- * Step 2d: Read QC after trimming using fastqc
+ * Step 1d: Read QC after trimming using fastqc
  */
 process FASTQC_AFTER_TRIM {
   tag "$id"
-  publishDir "$params.results/fastqc_after", mode: 'copy'
 
   input:
     tuple val(id), path(reads)
@@ -146,7 +143,7 @@ process FASTQC_AFTER_TRIM {
 
 
 /*
- * Step 2e: Summarise fastqc results using multiqc
+ * Step 1e: Summarise fastqc results using multiqc
  */
 process MULTIQC_FASTQC_AFTER_TRIM {
   publishDir "$params.results/multiqc_fastqc", mode: 'copy'
@@ -166,19 +163,20 @@ process MULTIQC_FASTQC_AFTER_TRIM {
 
 
 /*
- * Step 3a: Align reads to the reference genome
+ * Step 2a: Align reads to the reference ref_genome
  */
 process READ_MAPPING_BWA {
   tag "$id"
   publishDir "$params.results/bam", mode: 'copy', \
+    pattern: '*.bam*', \
     saveAs: { filename -> "${id}_$filename" }
 
   input: 
-    path genome
-    val genome_name
+    path ref_genome
+    val ref_genome_name
     path index
     tuple val(id), path(reads)
-    val bwa_option
+    val mapping_option
 
   output: 
     tuple \
@@ -190,7 +188,7 @@ process READ_MAPPING_BWA {
   """
   # read mapping
   bwa mem -R "@RG\\tID:${id}\\tSM:${id}\\tPL:Illumina" \
-    ${bwa_option} $genome $reads > sam
+    ${mapping_option} $ref_genome $reads > sam
 
   # sort and BAM file
   samtools fixmate -O bam sam bam_fixmate
@@ -205,19 +203,18 @@ process READ_MAPPING_BWA {
   samtools index markdup.bam
 
   # depth
-  samtools coverage markdup.bam > ${id}_coverage.txt
+  samtools coverage markdup.bam > coverage.txt
 
-  sed -i '' "s/${genome_name}/$id/" ${id}_coverage.txt  # for BSD sed
-  # sed -i "s/${genome_name}/$id/" ${id}_coverage.txt  # for gnu sed
+  sed "s/${ref_genome_name}/$id/;s/#rname/id/" coverage.txt > ${id}_coverage.txt
   
   # free up some disk space
-  rm sam bam_fixmate bam_sort
+  rm sam bam_fixmate bam_sort coverage.txt
   """
 }
 
 
 /*
- * Step 3b: Combine per-sample coverage info into a single file
+ * Step 2b: Combine per-sample coverage info into a single file
  */
 process COVERAGE_OUTPUT {
   publishDir "$params.results/bam", mode: 'copy'
@@ -235,14 +232,14 @@ process COVERAGE_OUTPUT {
 
 
 /*
- * Step 4a: Call variants for each sample
+ * Step 3a: Call variants for each sample
  */
 process CALL_VARIANTS {
   tag "$id"
   publishDir "$params.results/vcf", mode: 'copy'
 
   input:
-    path genome
+    path ref_genome
     path index
     path dict
     tuple val(id), path(bam), path(bai)
@@ -254,7 +251,7 @@ process CALL_VARIANTS {
 
   """ 
   gatk HaplotypeCaller \
-    -R $genome -I $bam \
+    -R $ref_genome -I $bam \
     -O ${id}.g.vcf.gz \
     -ERC GVCF \
     ${haplotypecaller_option}
@@ -262,6 +259,9 @@ process CALL_VARIANTS {
 }
 
 
+/*
+ * Step 3b: Create a list of samples to allow user to exclude samples
+ */
 process CREATE_SAMPLE_MAP {
   publishDir "$baseDir/data", mode: 'copy'
 
@@ -281,17 +281,14 @@ process CREATE_SAMPLE_MAP {
 
 
 /*
- * Step 4b: Call variants for all samples
+ * Step 4: Joinly call variants from multiple samples
  */
 process JOINT_GENOTYPING {
-  echo true
-  publishDir "$params.results/vcf_all", mode: 'copy'
-
   input:
-    path genome
+    path ref_genome
     path index
     path dict
-    val genome_name
+    val ref_genome_name
     path vcf_all
     path vcf_tbi_all
     path sample_map_usr
@@ -299,7 +296,7 @@ process JOINT_GENOTYPING {
     val genotypegvcfs_option
 
   output:
-    tuple path("merge.vcf.gz"), path("merge.vcf.gz.tbi")
+    tuple path("joint.vcf.gz"), path("joint.vcf.gz.tbi")
   
   when:
     !params.stop
@@ -311,74 +308,73 @@ process JOINT_GENOTYPING {
   if (is_sample_map_usr) {
     """
     gatk GenomicsDBImport \
-      -R $genome \
+      -R $ref_genome \
       --sample-name-map ${sample_map_usr} \
       --genomicsdb-workspace-path dbcohort \
-      -L $genome_name \
+      -L $ref_genome_name \
       ${genomicsdbimport_option}
 
-    gatk GenotypeGVCFs -R $genome -V gendb://dbcohort \
-      -O merge.vcf.gz ${genotypegvcfs_option}
+    gatk GenotypeGVCFs -R $ref_genome -V gendb://dbcohort \
+      -O joint.vcf.gz ${genotypegvcfs_option}
     """
   } else {
     """
     gatk GenomicsDBImport \
-      -R $genome \
+      -R $ref_genome \
       ${vcf_all_list} \
       --genomicsdb-workspace-path dbcohort \
-      -L $genome_name \
+      -L $ref_genome_name \
       ${genomicsdbimport_option}
 
-    gatk GenotypeGVCFs -R $genome -V gendb://dbcohort \
-      -O merge.vcf.gz ${genotypegvcfs_option}
+    gatk GenotypeGVCFs -R $ref_genome -V gendb://dbcohort \
+      -O joint.vcf.gz ${genotypegvcfs_option}
     """
   }
 }
 
 
 /*
- * Step 4c: Filter variants
+ * Step 5: Filter variants
  */
 process FILTER_VARIANTS {
-  publishDir "$params.results/vcf_all", mode: 'copy'
+  publishDir "$params.results/vcf_joint", mode: 'copy'
 
   input:
-    path genome
+    path ref_genome
     path index
     path dict
     val variant_filter
     val variant_filter_name
-    path mask_positions
-    tuple path("merge.vcf.gz"), path("merge.vcf.gz.tbi")
+    tuple path("joint.vcf.gz"), path("joint.vcf.gz.tbi")
     val selectvariant_option
   
   output:
-    tuple path("merge_filtered.vcf.gz"), path("merge_filtered.vcf.gz.tbi")
-    path "merge_filtered_stats.txt"
+    tuple path("joint_filtered.vcf.gz"), path("joint_filtered.vcf.gz.tbi")
+    path "joint_filtered_stats.txt"
 
   when:
     !params.stop
 
   """
   gatk VariantFiltration \
-    -R $genome \
-    -V merge.vcf.gz \
-    -O merge_filt.vcf.gz \
+    -R $ref_genome \
+    -V joint.vcf.gz \
+    -O joint_filt.vcf.gz \
     -filter "${variant_filter}" \
     --filter-name ${variant_filter_name}
   
   gatk SelectVariants \
-    -V merge_filt.vcf.gz \
-    -O merge_filtered.vcf.gz \
+    -V joint_filt.vcf.gz \
+    -O joint_filtered.vcf.gz \
     ${selectvariant_option}
 
-  bcftools stats -F $genome merge_filtered.vcf.gz > merge_filtered_stats.txt
+  bcftools stats -F $ref_genome joint_filtered.vcf.gz > joint_filtered_stats.txt
   """
 }
 
 
 /*
- * Step 5: Convert filtered vcf to multiple sequence alignment
+ * Step 6: Convert filtered vcf to multiple sequence alignment
  */
 process VCF_TO_FASTA {
   publishDir "$params.results/aln", mode: 'copy'
@@ -401,13 +397,12 @@ process VCF_TO_FASTA {
   datamash transpose --output-delimiter=, < gt > tmp
 
   # create alignment file
-  sed -i '' '1d' tmp  # for BSD sed
-  # sed -i '1d' tmp  # for gnu sed
+  sed -i.tmp '1d' tmp
 
   sed $'s/^/>/;s/.GT,/\\\n/g;s/,//g;s/[\.\*]/-/g' tmp > aln.fasta
 
   # cleanup
-  rm tmp gt
+  rm gt tmp tmp.tmp
 
   # optional: positions with ref variants
   gatk VariantsToTable -V $vcf -O pos.txt -F POS -F REF

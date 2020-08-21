@@ -1,22 +1,5 @@
 /*
- * Copyright (c) 2020
- * Center for Microbial Genomics, Mahidol University
- * 
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
- * 
- * This Source Code Form is "Incompatible With Secondary Licenses", as
- * defined by the Mozilla Public License, v. 2.0.
- */
-
-
- /* 
- * 'tuber' - A Nextflow pipeline for variant calling from NGS data
- * 
- * Yuttapong Thawornwattana
- * Bharkbhoom Jaemsai
+ * Process definitions
  */
 
 
@@ -82,6 +65,7 @@ process PREPARE_GENOME_PICARD {
  */
 process FASTQC_BEFORE_TRIM {
   tag "$id"
+  publishDir "$params.results/fastqc_before", mode: 'copy'
 
   input:
     tuple val(id), path(reads)
@@ -106,8 +90,8 @@ process MULTIQC_FASTQC_BEFORE_TRIM {
     path fastqc_before_all
 
   output:
-    path("before.html")
-    path("before_data")
+    path "before.html"
+    path "before_data"
 
   """
   multiqc ${fastqc_before_all} --interactive --filename before
@@ -147,6 +131,7 @@ process TRIM {
  */
 process FASTQC_AFTER_TRIM {
   tag "$id"
+  publishDir "$params.results/fastqc_after", mode: 'copy'
 
   input:
     tuple val(id), path(reads)
@@ -171,8 +156,8 @@ process MULTIQC_FASTQC_AFTER_TRIM {
     path fastqc_after_all
 
   output:
-    path("after.html")
-    path("after_data")
+    path "after.html"
+    path "after_data"
 
   """
   multiqc ${fastqc_after_all} --interactive --filename after
@@ -185,9 +170,12 @@ process MULTIQC_FASTQC_AFTER_TRIM {
  */
 process READ_MAPPING_BWA {
   tag "$id"
+  publishDir "$params.results/bam", mode: 'copy', \
+    saveAs: { filename -> "${id}_$filename" }
 
   input: 
     path genome
+    val genome_name
     path index
     tuple val(id), path(reads)
     val bwa_option
@@ -218,6 +206,9 @@ process READ_MAPPING_BWA {
 
   # depth
   samtools coverage markdup.bam > ${id}_coverage.txt
+
+  sed -i '' "s/${genome_name}/$id/" ${id}_coverage.txt  # for BSD sed
+  # sed -i "s/${genome_name}/$id/" ${id}_coverage.txt  # for gnu sed
   
   # free up some disk space
   rm sam bam_fixmate bam_sort
@@ -257,7 +248,7 @@ process CALL_VARIANTS {
     tuple val(id), path(bam), path(bai)
     val haplotypecaller_option
  
-  output:
+  output: 
     path "${id}.g.vcf.gz", emit: vcf
     path "${id}.g.vcf.gz.tbi", emit: vcf_tbi
 
@@ -271,10 +262,31 @@ process CALL_VARIANTS {
 }
 
 
+process CREATE_SAMPLE_MAP {
+  publishDir "$baseDir/data", mode: 'copy'
+
+  input:
+    path vcf_all
+
+  output:
+    path "sample_map.txt", emit: sample_map
+
+  script:
+  def vcf_all_list = vcf_all.collect{ "$it\t$it" }.join('\n')
+  """
+  echo "${vcf_all_list}" > out1.txt
+  sed 's/.g.vcf.gz\t/\t/g' out1.txt > sample_map.txt
+  """
+}
+
+
 /*
  * Step 4b: Call variants for all samples
  */
 process JOINT_GENOTYPING {
+  echo true
+  publishDir "$params.results/vcf_all", mode: 'copy'
+
   input:
     path genome
     path index
@@ -282,25 +294,45 @@ process JOINT_GENOTYPING {
     val genome_name
     path vcf_all
     path vcf_tbi_all
+    path sample_map_usr
     val genomicsdbimport_option
     val genotypegvcfs_option
 
   output:
     tuple path("merge.vcf.gz"), path("merge.vcf.gz.tbi")
   
+  when:
+    !params.stop
+
   script:
   def vcf_all_list = vcf_all.collect{ "-V $it" }.join(' ')
-  """
-  gatk GenomicsDBImport \
-    -R $genome \
-    ${vcf_all_list} \
-    --genomicsdb-workspace-path dbcohort \
-    -L $genome_name \
-    ${genomicsdbimport_option}
+  def is_sample_map_usr = sample_map_usr.exists()
 
-  gatk GenotypeGVCFs -R $genome -V gendb://dbcohort \
-    -O merge.vcf.gz ${genotypegvcfs_option}
-  """
+  if (is_sample_map_usr) {
+    """
+    gatk GenomicsDBImport \
+      -R $genome \
+      --sample-name-map ${sample_map_usr} \
+      --genomicsdb-workspace-path dbcohort \
+      -L $genome_name \
+      ${genomicsdbimport_option}
+
+    gatk GenotypeGVCFs -R $genome -V gendb://dbcohort \
+      -O merge.vcf.gz ${genotypegvcfs_option}
+    """
+  } else {
+    """
+    gatk GenomicsDBImport \
+      -R $genome \
+      ${vcf_all_list} \
+      --genomicsdb-workspace-path dbcohort \
+      -L $genome_name \
+      ${genomicsdbimport_option}
+
+    gatk GenotypeGVCFs -R $genome -V gendb://dbcohort \
+      -O merge.vcf.gz ${genotypegvcfs_option}
+    """
+  }
 }
 
 
@@ -322,7 +354,10 @@ process FILTER_VARIANTS {
   
   output:
     tuple path("merge_filtered.vcf.gz"), path("merge_filtered.vcf.gz.tbi")
-    path("merge_filtered_stats.txt")
+    path "merge_filtered_stats.txt"
+
+  when:
+    !params.stop
 
   """
   gatk VariantFiltration \
@@ -333,9 +368,9 @@ process FILTER_VARIANTS {
     --filter-name ${variant_filter_name}
   
   gatk SelectVariants \
-  -V merge_filt.vcf.gz \
-  -O merge_filtered.vcf.gz \
-  ${selectvariant_option}
+    -V merge_filt.vcf.gz \
+    -O merge_filtered.vcf.gz \
+    ${selectvariant_option}
 
   bcftools stats -F $genome merge_filtered.vcf.gz > merge_filtered_stats.txt
   """
@@ -355,15 +390,15 @@ process VCF_TO_FASTA {
     path "pos.txt"
     path "aln.fasta"
 
+  when:
+    !params.stop
+  
   script:
   $/
   gatk VariantsToTable -V $vcf -O gt -F POS -GF GT
 
   # transpose genotype table from gatk
   datamash transpose --output-delimiter=, < gt > tmp
-
-  # create position file
-  # head -1 tmp | sed -e 's/POS,//' -e $'s/,/\\\n/g' > fpos
 
   # create alignment file
   sed -i '' '1d' tmp  # for BSD sed
@@ -378,4 +413,3 @@ process VCF_TO_FASTA {
   gatk VariantsToTable -V $vcf -O pos.txt -F POS -F REF
   /$
 }
-

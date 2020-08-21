@@ -29,9 +29,9 @@ nextflow.enable.dsl = 2
  * Define the default parameters
  */
 // paths & inputs
-baseDir          = "$HOME/pipeline"
-params.genome    = "$baseDir/data/ref.fasta"
-params.reads     = "$baseDir/data/reads/ori/*_{1,2}.fastq.gz"
+baseDir          = "$HOME/proj/pipeline"
+params.genome    = "$baseDir/data/reference/ref.fasta"
+params.reads     = "$baseDir/data/reads/*_{1,2}.fastq.gz"
 params.results   = "$baseDir/results"
 params.adapter   = "$baseDir/data/adapters"
 params.genome_name = "NC_000962.3"
@@ -46,12 +46,16 @@ params.bwa_option = "-c 100 -M -T 50"
 params.haplotypecaller_option = "-ploidy 1 -mbq 20"
 params.genomicsdbimport_option = "--batch-size 200"
 params.genotypegvcfs_option = "-ploidy 1"
+params.sample_map_usr = "$baseDir/data/sample_map_usr.txt"
 
 // parameters for variant filtering
 params.variant_filter="QD < 2.0 || MQ < 40.0"
 params.variant_filter_name="qd-mq"
 params.mask_positions = "$baseDir/data/snp-mask-reduced.list"
 params.selectvariant_option = "--exclude-filtered -select-type SNP"
+
+// params.stop = true
+params.stop = false
 
 
 log.info """\
@@ -81,6 +85,7 @@ include {
   COVERAGE_OUTPUT;
 
   CALL_VARIANTS;
+  CREATE_SAMPLE_MAP;
   JOINT_GENOTYPING;
   FILTER_VARIANTS;
 
@@ -94,6 +99,10 @@ include {
 workflow {
   // input: paired-end reads
   read_pairs = Channel.fromFilePairs(params.reads)
+
+  // optional input: user-specified list of samples to be included
+  // in joint genotyping [default: use all samples]
+  sample_map_usr = Channel.fromPath(params.sample_map_usr)
 
   // Step 1: Data preparation
   PREPARE_GENOME_SAMTOOLS(params.genome)
@@ -114,6 +123,7 @@ workflow {
   // Step 3: Read mapping using BWA MEM
   READ_MAPPING_BWA(
     params.genome,
+    params.genome_name,
     PREPARE_GENOME_BWA.out,
     TRIM.out,
     params.bwa_option)
@@ -127,10 +137,15 @@ workflow {
     READ_MAPPING_BWA.out[0].groupTuple(),
     params.haplotypecaller_option)
 
+  // Create a list of samples to allow user to exclude samples
+  // before joint genotyping
   COVERAGE_OUTPUT(
     READ_MAPPING_BWA.out[1].collect())
 
   // Joint genotyping using GATK GenotypeGVCFs
+  CREATE_SAMPLE_MAP(
+    CALL_VARIANTS.out.vcf.collect())
+
   JOINT_GENOTYPING( 
     params.genome,
     PREPARE_GENOME_SAMTOOLS.out,
@@ -138,6 +153,7 @@ workflow {
     params.genome_name, 
     CALL_VARIANTS.out.vcf.collect(),
     CALL_VARIANTS.out.vcf_tbi.collect(),
+    sample_map_usr,
     params.genomicsdbimport_option,
     params.genotypegvcfs_option)
 

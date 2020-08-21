@@ -104,12 +104,12 @@ workflow {
   // in joint genotyping [default: use all samples]
   sample_map_usr = Channel.fromPath(params.sample_map_usr)
 
-  // Step 1: Data preparation
+  // STEP 1: Data preparation
   PREPARE_GENOME_SAMTOOLS(params.genome)
   PREPARE_GENOME_PICARD(params.genome)
   PREPARE_GENOME_BWA(params.genome)
 
-  // Step 2: Quality trimming, with read QC before and after
+  // STEP 2: Quality trimming, with read QC before and after
   FASTQC_BEFORE_TRIM(read_pairs)
   MULTIQC_FASTQC_BEFORE_TRIM(FASTQC_BEFORE_TRIM.out.collect())
   TRIM(
@@ -120,7 +120,7 @@ workflow {
   FASTQC_AFTER_TRIM(TRIM.out)
   MULTIQC_FASTQC_AFTER_TRIM(FASTQC_AFTER_TRIM.out.collect())
 
-  // Step 3: Read mapping using BWA MEM
+  // STEP 3: Read mapping using BWA MEM
   READ_MAPPING_BWA(
     params.genome,
     params.genome_name,
@@ -128,7 +128,11 @@ workflow {
     TRIM.out,
     params.bwa_option)
 
-  // Step 4: Variant calling
+  // Report per-sample depth and coverage statistics
+  COVERAGE_OUTPUT(
+    READ_MAPPING_BWA.out[1].collect())
+
+  // STEP 4: Variant calling
   // Per-sample variant calling using GATK HaplotypeCaller
   CALL_VARIANTS(
     params.genome, 
@@ -139,13 +143,10 @@ workflow {
 
   // Create a list of samples to allow user to exclude samples
   // before joint genotyping
-  COVERAGE_OUTPUT(
-    READ_MAPPING_BWA.out[1].collect())
-
-  // Joint genotyping using GATK GenotypeGVCFs
   CREATE_SAMPLE_MAP(
     CALL_VARIANTS.out.vcf.collect())
 
+  // Joint genotyping using GATK GenotypeGVCFs
   JOINT_GENOTYPING( 
     params.genome,
     PREPARE_GENOME_SAMTOOLS.out,
@@ -168,6 +169,6 @@ workflow {
     JOINT_GENOTYPING.out,
     params.selectvariant_option)
 
-  // Step 5: Generating multiple sequence alignment from vcf
+  // STEP 5: Generating multiple sequence alignment from vcf
   VCF_TO_FASTA(FILTER_VARIANTS.out[0])
 }

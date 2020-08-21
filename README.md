@@ -1,19 +1,19 @@
 # tuber
 # Description
-Whole genome sequencing data are used for various purposes including molecular typing, classification and phylogenetic analysis./ We present ‘tuber’, a Nextflow pipeline for variant calling from WGS data. This pipeline is an implementation of tools for pre-processing raw data and quality control, mapping, (short) variant calling and filtering to produce a ready to use vcf and multiple sequence alignment files. tuber includes workflow of GATK Best Practices for germline short variant discovery, [link](https://gatk.broadinstitute.org/hc/en-us/articles/360035535932-Germline-short-variant-discovery-SNPs-Indels-). VQSR is not included here and hard filtering is used instead. In addition to the GATK Best Practices, tuber includes steps to parse the SNV table into a multiple sequence alignment in fasta format.
+Whole genome sequencing data are used for various purposes including molecular typing, classification and phylogenetic analysis. We present `tuber`, a Nextflow pipeline for variant calling from WGS data. This pipeline is an implementation of tools for raw data quality control and pre-processing, mapping, (short) variant calling and filtering to produce a ready to use vcf and multiple sequence alignment files. tuber includes workflow of GATK Best Practices for germline short variant discovery, [link](https://gatk.broadinstitute.org/hc/en-us/articles/360035535932-Germline-short-variant-discovery-SNPs-Indels-), which allows users to work on large datasets. VQSR is not included here and hard filtering is used instead. In addition to the GATK Best Practices, tuber includes steps to parse the SNV table into a multiple sequence alignment in fasta format.
 
 # Inputs
-- raw data (.fastq); file name should/must match the following scheme: _{1,2}.fastq.gz 
-- reference genome sequence (.fasta)
+- Raw data (.fastq); file name must match the following scheme: _{1,2}.fastq.gz 
+- Reference genome sequence (.fasta)
 - (Optional) adapter sequence (.fasta); learn more at [Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic)
 - (Optional) list of sample id to be included for joint-genotyping (must be named sample_map_usr.txt)
 
 # Outputs 
-tuber will produce outputs inside the output directory specified by users.
+tuber will produce outputs inside the results directory specified by users.
 -HTML report of FastQC 
--tables, many tables
-- A final VCF
-- multiple sequence alignment in fasta format
+-Tables, many tables
+-A final VCF
+-Multiple sequence alignment in fasta format
 
 # Installation and usage
 1. Install dependencies listed below. (tuber will run on Linux or MacOSX; )
@@ -26,20 +26,20 @@ tuber will produce outputs inside the output directory specified by users.
 
     | Section | Parameter | Default |
     | ------ | ------ | ------ |
-    | paths & inputs | `baseDir` <br>`params.ref_genome` <br>`params.reads` <br>`params.results` <br>`params.genome_name` | 
-    | parameters for trimming | `params.trimming_option` |
-    | parameter for read mapping | `params.mapping_option` |
-    | parameters for variant calling | `params.haplotypecaller_option` <br>`params.genomicsdbimport_option` <br>`params.genotypegvcfs_option` |
-    | parameters for variant filtering | `params.variant_filter` <br>`params.variant_filter_name`  <br>`params.selectvariant_option` |
-    | optional stop | params.stop | false |
+    | paths & inputs | `baseDir` <br>`params.ref_genome` <br>`params.reads` <br>`params.results` <br>`params.genome_name` | <br>`$HOME/proj/pipeline` <br>`$baseDir/data/reference/ref.fasta` <br>`baseDir/data/reads/*_{1,2}.fastq.gz` <br>`baseDir/results` <br>`baseDir/data/adapters` <br>`NC_000962.3`
+    | parameters for trimming | `params.trimming_option` | <br>`SLIDINGWINDOW:4:30 MINLEN:70`
+    | parameter for read mapping | `params.mapping_option` | <br>`-c 100 -M -T 50` 
+    | parameters for variant calling | `params.haplotypecaller_option` <br>`params.genomicsdbimport_option` <br>`params.genotypegvcfs_option` | <br>`-ploidy 1` <br>`-mbq 20"` 
+    | parameters for variant filtering | `params.variant_filter` <br>`params.variant_filter_name`  <br>`params.selectvariant_option` | <br>`QD < 2.0 || MQ < 40.0` <br>`qd-mq` <br>`--exclude-filtered -select-type SNP`
+    | optional stop | params.stop | <br>`false` | 
 
 4. Launch the pipeline execution with the following command:
     ```sh
-    $ ./run.sh
+    $ ./tuber.sh
     ```
 5. tuber will consume huge amount of space. Once the run has finised, you can clean up workspace by removing `work/`. 
 
-#### This script will perform the following:
+# This script will perform the following:
 #### 1. Preprocessing raw reads
 Trimmomatic will be used for Illumina adapters clipping and trimming low quality (sequences in the) reads. Reads that are shorter than the defined length will be dropped. By default it is set as: `-PE -phred33, ILLUMINACLIP:TruSeq3-PE.fa:2:30:10, SLIDINGWINDOW:4:30, MINLEN:70`
 
@@ -54,7 +54,7 @@ GATK HaplotypeCaller will use BAM files as input for calling short variants (SNV
 #### 4. Consolidating GVCFs and joint-genotyping
 GATK GenomicsDBImport will create a GenomicsDB workspace and then import single-sample GVCFs into this workspace. GATK GenotypeGVCFs then will perform joint genotyping on GenomicsDB workspace to produce a multi-sample VCF. By default, GenomicsDBImport will read sample_map.txt to import all samples into the workspace. In case users have stopped the run after finishing step 3 for checking the results from steps 1 and 2 to exclude some /problematic, low quality/ samples before proceeding to next steps. If users want to proceed to the next step without any change, use command `./sh tuber.sh` to do so. But if users want to include only some samples, users will need to provide a tab-delimited text file in input directory (formatted as shown below and file must be named sample_map_usr.txt)
 
-Sample_1	Sample_1.g.vcf.gz
+Sample_1  Sample_1.g.vcf.gz
 Sample_2	Sample_2.g.vcf.gz
 Sample_3	Sample_2.g.vcf.gz
 

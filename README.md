@@ -1,133 +1,85 @@
 # tuber
-## Description
-Whole genome sequencing data are used for various purposes ///Variant detection, phylogenetic analysis, …///. This pipeline is an implementation of /a series of/ tools for pre-processing raw data, quality control checking, mapping (against the reference genome), (short) variant calling and filtering to produce a ready to use vcf/msa file. The GATK Best Practices implemented in this pipeline are used for variant calling in GVCF mode, which allows users to work on a large set of samples. 
+# Description
+Whole genome sequencing data are used for various purposes including molecular typing, classification and phylogenetic analysis./ We present ‘tuber’, a Nextflow pipeline for variant calling from WGS data. This pipeline is an implementation of tools for pre-processing raw data and quality control, mapping, (short) variant calling and filtering to produce a ready to use vcf and multiple sequence alignment files. tuber includes workflow of GATK Best Practices for germline short variant discovery, [link](https://gatk.broadinstitute.org/hc/en-us/articles/360035535932-Germline-short-variant-discovery-SNPs-Indels-). VQSR is not included here and hard filtering is used instead. In addition to the GATK Best Practices, tuber includes steps to parse the SNV table into a multiple sequence alignment in fasta format.
 
-tuber is composed of two parts, ////preprocessing+per-sample variant calling  ///joint-genotyping+VCF-to-MSA.
+# Inputs
+- raw data (.fastq); file name should/must match the following scheme: _{1,2}.fastq.gz 
+- reference genome sequence (.fasta)
+- (Optional) adapter sequence (.fasta); learn more at [Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic)
+- (Optional) list of sample id to be included for joint-genotyping (must be named sample_map_usr.txt)
 
-Part I (tuber_1.nf)
-preprocessing-mapping-sorting-per sample variant calling
-Results of this part will help users to QC check and select a set of high quality sample for joint-genotyping.
-Users will need to create a sample map file 
+# Outputs 
+tuber will produce outputs inside the output directory specified by users.
+-HTML report of FastQC 
+-tables, many tables
+- A final VCF
+- multiple sequence alignment in fasta format
 
-Part II (tuber_2.nf)
-flexibility to 
-
-This pipeline applies workflow 
-https://gatk.broadinstitute.org/hc/en-us/articles/360035535932-Germline-short-variant-discovery-SNPs-Indels-
-
-|  | Part I | Part II |
-| ------ | ------ | ------ |
-| Input | fastq, fasta| GVCFs, fasta, sample map
-| Output | GVCFs, HTML, Table | VCF, MSA (.fasta)
-
-Raw data in fastq format, file name should match the following scheme:  _{1,2}.gz. Reference genome sequence in fasta format. Tuber will produce outputs inside the directory specified by users. Final output will be filtered VCF file (.vcf) and multiple sequence alignment (.fasta).
-
-# Part I
-
- ```sh
-     $ nextflow run >>>>>1.nf
-```
-
-#### This script will perform the following:
-#### 1. Preprocessing raw reads
-Trimmomatic will be used for Illumina adapters clipping and trimming low quality (sequences in the) reads. Short reads will be dropped. By default it is set as: 
-- PE -phred33, ILLUMINACLIP:TruSeq3-PE.fa:2:30:10, SLIDINGWINDOW:4:30, MINLEN:70
-
-Fastqc is used to QC check reads before and after processing with Trimmomatic. Then MultiQC will parse summary stats from fastqc results of each sample to produce HTML report and summary tables of multiple sample.
-
-#### 2. Mapping
-Processed reads will be aligned to the reference genome sequence with BWA. Default is mem -c 100 -M -T 50
- SAM files will be converted into BAM files by samtools and duplicate reads will be marked by Picard.
-Average depth and genome coverage are calculated using Samtools.
-
-#### 4. Per-sample variant calling
-HaplotypeCaller will use BAM files as input to call short variants (SNVs and INDELs) in GVCF mode. Minimum base quality is set to 20. This step will generate an intermediate file (GVCF) per-sample, which will be used for joint genotyping to produce a final multi-sample VCF file.
-
-#### Generating a sample map file (by users)
-Combine results processes 1b and 2c, samples that meet the criteria will be listed in a sample map file. This file will be used in 4a (consolidating GVCFs). Default is set to 1) GC content (passed) 2) meandepth>10X 3) coverage>90%
-
-# Part II 
-Users will need to create a sample map file (file name must be sample_map.txt), save this to ____ directory.
-Then use this command to run part 2 of pipeline.
-
-  ```sh
-     $ nextflow run >>>>>2.nf
-```
-#### 1. Consolidating GVCFs and joint-genotyping
-GATK GenomicsDBImport will create a GenomicsDB workspace and then import single-sample GVCFs (listed in a sample map file) into this workspace. GATK GenotypeGVCFs then will perform joint genotyping on GenomicsDB workspace to produce a final VCF.
-#### 2. Hard filtering and annotation
-INDELS will be filtered with GATK SelectVariants. Remaining SNVs will be filtered by GATK VariantsFiltration with default filter settings 1) minimum QD of 2 and 2) minimum MQ of 50.
-
-#### 3. VCF to FASTA
-Filtered VCF will be pasred to produce SNV table using GATK VariantsToTable.
-SNV table will be parsed into FASTA format.
-
-# Installing and usage
-1. Install dependencies listed below
+# Installation and usage
+1. Install dependencies listed below. (tuber will run on Linux or MacOSX; )
 2. Download nextflow pipeline scripts to (user specified directory)
      ```sh
-     $ curl https://github.com/b600a/<<<<<<<.nf
-     $ curl https://github.com/b600a/>>>>>>>.nf
+     $ git clone https://github.com/b600a/tuber.git
+     $ cd tuber
      ```
-3. Users will need to specify 1) the location of raw read (FASTQ) files, 2) the location of reference genome sequence (FASTA) file and 3) the location of output. Users will also need to specify some parameters to make them more suitable for the dataset. By using a text editor, look sections listed below in <<<<<<<.nf file to define proper parameters.
+3. Users will need to specify paths to the input files, reference genome sequence and path for outputs by using any text editor to edit tuber.sh file (--ref_genome /////, /////). Users may also need to specify some parameters to make them more suitable for the dataset, these are listed below. 
 
-    | Section | Parameter |
-    | ------ | ------ |
-    | User Defines LOCATIONS | The location of raw read (FASTQ) files, reference genome sequence (FASTA) file, output directory|
-    | User Defines TRIMMING OPTIONS | phred quality score, adapter clipping, SLIDINGWINDOW:4:30, minimum read lenght |
-    | User Defines SAMPLE FILTERING OPTIONS | minimum mean depth, minimum genome coverage |
-    | User Defines HARD FILTERING OPTIONS | QD, MQ |
-
+    | Section | Parameter | Default |
+    | ------ | ------ | ------ |
+    | paths & inputs | `baseDir` <br>`params.ref_genome` <br>`params.reads` <br>`params.results` <br>`params.genome_name` | 
+    | parameters for trimming | `params.trimming_option` |
+    | parameter for read mapping | `params.mapping_option` |
+    | parameters for variant calling | `params.haplotypecaller_option` <br>`params.genomicsdbimport_option` <br>`params.genotypegvcfs_option` |
+    | parameters for variant filtering | `params.variant_filter` <br>`params.variant_filter_name`  <br>`params.selectvariant_option` |
+    | optional stop | params.stop | false |
 
 4. Launch the pipeline execution with the following command:
     ```sh
-    $ nextflow run >>>>>>>>>>>>.nf
+    $ ./run.sh
     ```
+5. tuber will consume huge amount of space. Once the run has finised, you can clean up workspace by removing `work/`. 
+
+#### This script will perform the following:
+#### 1. Preprocessing raw reads
+Trimmomatic will be used for Illumina adapters clipping and trimming low quality (sequences in the) reads. Reads that are shorter than the defined length will be dropped. By default it is set as: `-PE -phred33, ILLUMINACLIP:TruSeq3-PE.fa:2:30:10, SLIDINGWINDOW:4:30, MINLEN:70`
+
+Fastqc will be used forQC checking sequencing reads before and after processing with Trimmomatic. Then MultiQC will parse summary stats from fastqc results of each sample to produce summary tables (multiqc_fasqc.txt and multiqc_general_stats.txt and HTML reports in `multiqc_fastqc/` in output directory.
+
+#### 2. Mapping, indexing, sorting, calculating depth and coverage
+Processed reads will be aligned to the reference genome sequence with BWA MEM. Default is set as: `-c 100 -M -T 50`. SAM files will be converted into BAM files by samtools and duplicate reads will be marked by Picard. Average depth and genome coverage of each sample are calculated from BAM using Samtools, results will be parsed into coverage.tsv file in `bam/` in output directory.
+
+#### 3. Per-sample variant calling
+GATK HaplotypeCaller will use BAM files as input for calling short variants (SNVs and INDELs) in GVCF mode. Default options are set as Minimum base quality 20 and ploidy 1. This step will generate an intermediate file (GVCF) per-sample, which will be used for joint genotyping to produce a final multi-sample VCF file. A list of GVCF files generated will be parsed into tab-delimited text file (named as sample_map.txt) in the input directory. By default tuber will proceed to the next step, all samples will be imported into the workspace for joint genotyping. Users can also choose to stop tuber at this step by specifying `--stop true` in tuber.sh file. Users can check the results of MultiQC (HTML reports) and Samtools (coverage.tsv) to select only samples that meet the criteria (e.g. minimum read quality, minimum mean depth, minimum genome coverage) before joint-genotyping. If this parameter is left as default setting, tuber will proceed to step 4.
+
+#### 4. Consolidating GVCFs and joint-genotyping
+GATK GenomicsDBImport will create a GenomicsDB workspace and then import single-sample GVCFs into this workspace. GATK GenotypeGVCFs then will perform joint genotyping on GenomicsDB workspace to produce a multi-sample VCF. By default, GenomicsDBImport will read sample_map.txt to import all samples into the workspace. In case users have stopped the run after finishing step 3 for checking the results from steps 1 and 2 to exclude some /problematic, low quality/ samples before proceeding to next steps. If users want to proceed to the next step without any change, use command `./sh tuber.sh` to do so. But if users want to include only some samples, users will need to provide a tab-delimited text file in input directory (formatted as shown below and file must be named sample_map_usr.txt)
+
+Sample_1	Sample_1.g.vcf.gz
+Sample_2	Sample_2.g.vcf.gz
+Sample_3	Sample_2.g.vcf.gz
+
+GenomicsDBImport then will automatically read sample_map_usr.txt file and import only samples that are listed to the workspace. After saving sample_map_usr.txt file to the input directory, execute command ./sh tuber.sh to start joint genotyping.
+
+#### 5. Variant filtering
+By default, INDELS will be filtered with GATK SelectVariants. Remaining SNVs will be filtered by GATK VariantsFiltration with filter settings: minimum QD of 2 and minimum MQ of 40. Filtered VCF file will be generated in vcf_joint directory in output directory (named joint_filtered.vcf.gz)
+
+#### 6. VCF to FASTA
+Filtered VCF will be parsed to produce a SNV table using GATK VariantsToTable. 
+SNV table will be parsed into FASTA format (file named aln.fasta) in aln directory in output directory.
+Position of SNVs (in reference coordiates) will also be parsed into file named pos.txt in the same directory.
+
+
+
 # Schematic outline
 insert picture here
 
 # Dependencies
 
-Nextflow
-	https://www.nextflow.io/docs/latest/getstarted.html#installation
-Fastqc 
-	https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
-Multiqc
-	https://multiqc.info/, https://github.com/ewels/MultiQC
-Trimmomatic
-	http://www.usadellab.org/cms/?page=trimmomatic
-BWA
-	https://github.com/lh3/bwa
-Samtools
-
-Bcftools
-	
-GATK4
-https://gatk.broadinstitute.org/hc/en-us/articles/360036194592-Getting-started-with-GATK4
-
-
-
-
-[//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
-
-
-   [dill]: <https://github.com/joemccann/dillinger>
-   [git-repo-url]: <https://github.com/joemccann/dillinger.git>
-   [john gruber]: <http://daringfireball.net>
-   [df1]: <http://daringfireball.net/projects/markdown/>
-   [markdown-it]: <https://github.com/markdown-it/markdown-it>
-   [Ace Editor]: <http://ace.ajax.org>
-   [node.js]: <http://nodejs.org>
-   [Twitter Bootstrap]: <http://twitter.github.com/bootstrap/>
-   [jQuery]: <http://jquery.com>
-   [@tjholowaychuk]: <http://twitter.com/tjholowaychuk>
-   [express]: <http://expressjs.com>
-   [AngularJS]: <http://angularjs.org>
-   [Gulp]: <http://gulpjs.com>
-
-   [PlDb]: <https://github.com/joemccann/dillinger/tree/master/plugins/dropbox/README.md>
-   [PlGh]: <https://github.com/joemccann/dillinger/tree/master/plugins/github/README.md>
-   [PlGd]: <https://github.com/joemccann/dillinger/tree/master/plugins/googledrive/README.md>
-   [PlOd]: <https://github.com/joemccann/dillinger/tree/master/plugins/onedrive/README.md>
-   [PlMe]: <https://github.com/joemccann/dillinger/tree/master/plugins/medium/README.md>
-   [PlGa]: <https://github.com/RahulHP/dillinger/blob/master/plugins/googleanalytics/README.md>
+* [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html#installation)
+* [Fastqc ](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/ )
+* [Multiqc](https://multiqc.info/)
+* [Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic )
+* [BWA](https://github.com/lh3/bwa )
+* [Samtools](http://www.htslib.org)	
+* [Bcftools](http://www.htslib.org)
+* [GATK4](https://github.com/broadinstitute/gatk/releases)

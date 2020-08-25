@@ -55,13 +55,13 @@ GATK HaplotypeCaller will use BAM files as input for calling short variants (SNV
 GATK GenomicsDBImport will create a GenomicsDB workspace and then import single-sample GVCFs into this workspace. GATK GenotypeGVCFs then will perform joint genotyping on GenomicsDB workspace to produce a multi-sample VCF. By default, GenomicsDBImport will read sample_map.txt to import all samples into the workspace. In case users have stopped the run after finishing step 3 for checking the results from steps 1 and 2 to exclude some problematic or low quality samples before proceeding to next steps. If users want to proceed to the next step without any change, use command `./sh tuber.sh` to do so. But if users want to include only some samples, users will need to provide a tab-delimited text file in input directory (formatted as shown below and file must be named sample_map_usr.txt)
 
 Sample_1  Sample_1.g.vcf.gz
-Sample_2	Sample_2.g.vcf.gz
-Sample_3	Sample_2.g.vcf.gz
+<br>Sample_2	Sample_2.g.vcf.gz
+<br>Sample_3	Sample_2.g.vcf.gz
 
-GenomicsDBImport then will automatically read sample_map_usr.txt file and import only samples that are listed to the workspace. After saving sample_map_usr.txt file to the input directory, execute command ./sh tuber.sh to start joint genotyping.
+GenomicsDBImport then will automatically read sample_map_usr.txt file and import only samples that are listed to the workspace. After saving sample_map_usr.txt file to the input directory, execute command `./sh tuber.sh` to start joint genotyping.
 
 #### 5. Variant filtering
-By default, INDELS will be filtered with GATK SelectVariants. Remaining SNVs will be filtered by GATK VariantsFiltration with filter settings: minimum QD of 2 and minimum MQ of 40. Filtered VCF file will be generated in vcf_joint directory in output directory (named joint_filtered.vcf.gz)
+By default, INDELS will be filtered with GATK SelectVariants (`-select-type SNP`) . Remaining SNVs will be filtered by GATK VariantsFiltration with filter settings: `QD < 2.0 || MQ < 40.0` (. Filtered VCF file will be generated in vcf_joint directory in output directory (named joint_filtered.vcf.gz)
 
 #### 6. VCF to FASTA
 Filtered VCF will be parsed to produce a SNV table using GATK VariantsToTable. 

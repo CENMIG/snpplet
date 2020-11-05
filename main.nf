@@ -68,11 +68,10 @@ Trimming option (for trimmomatic): $params.trimming_option
 Mapping option (for BWA MEM); $params.mapping_option
 Option for HaplotypeCaller (per-sample variant calling): $params.haplotypecaller_option
 Option for variant filtering (using VariantFilatration): $params.variant_filter
-(Optional) Stop after finishing step 4 (per-sample variant calling by HaplotypeCaller): $params.stop
-
-
-"""
+(Optional) Stop after finishing step 3 (per-sample variant calling by HaplotypeCaller): $params.stop
 ========================================================
+"""
+
 
 /* 
  * Import modules 

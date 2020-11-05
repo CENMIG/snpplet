@@ -59,12 +59,20 @@ params.stop = false
 
 log.info """\
 tuber v0.2
-================================
-genome   : $params.ref_genome
-reads    : $params.reads
-results  : $params.results
-"""
+========================================================
+Reference genome sequence: $params.ref_genome
+Reference genome name: $params.ref_genome_name
+Raw reads: $params.reads
+Results  : $params.results
+Trimming option (for trimmomatic): $params.trimming_option
+Mapping option (for BWA MEM); $params.mapping_option
+Option for HaplotypeCaller (per-sample variant calling): $params.haplotypecaller_option
+Option for variant filtering (using VariantFilatration): $params.variant_filter
+(Optional) Stop after finishing step 4 (per-sample variant calling by HaplotypeCaller): $params.stop
 
+
+"""
+========================================================
 
 /* 
  * Import modules 

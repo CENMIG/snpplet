@@ -169,7 +169,7 @@ Paths/Paramter | Paramter name | Default
 ------ | ------ | ------
 `params.reads` | the location of the read fastq files | `/home/reads/*_{1,2}.fastq.gz`
 `params.ref_genome` | the location of the read fastq files | `/home/ref/reference.fasta`
-`params.results` | the location where the results will be stored |  `/home/bb_20/out/`
+`params.results` | the location where the results will be stored |  `/home/results/`
 `params.genome_name` | genome name | `NC000962.3`
 `params.trimming_option` | parameter for trimming (Trimmomatic) | `SLIDINGWINDOW:4:30 MINLEN:70`
 `params.mapping_option` | parameter for read mapping (BWA) | `-c 100 -M -T 50`
@@ -226,7 +226,7 @@ Paths/Paramter | Paramter name | Default
      > samtools
      
 
-     2.1 Launch `nexflow` to install its dependencies by running `$ nextflow`
+   <br>  2.1 Launch `nexflow` to install its dependencies by running `$ nextflow`
      
 #### 3. Install another dependency for `FastaNGS` using `pip`:
         

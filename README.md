@@ -1,7 +1,7 @@
-# `tuber`
+# `FastaNGS`
 A nexflow pipeline for short variant calling from NGS data
 ## Description
-Whole genome sequencing data are used for various purposes including molecular typing, classification and phylogenetic analysis. The `tuber` pipeline processes NGS data to obtain short variants (SNVs and INDELs). This pipeline implements tools for raw data quality control and pre-processing, read mapping, variant calling and filtering to produce a ready to use vcf and multiple sequence alignment files. The tuber pipeline includes workflow of GATK Best Practices for germline short variant discovery, [link](https://gatk.broadinstitute.org/hc/en-us/articles/360035535932-Germline-short-variant-discovery-SNPs-Indels-), which allows users to work on large datasets. In addition to the GATK Best Practices, tuber includes a step to parse the SNV table into a multiple sequence alignment in fasta format. (`tuber` runs well under Linux OS and MacOSX; for Windows users `tuber` also runs well under linux in a virtual machine or Windows subsystem for linux)
+Whole genome sequencing data are used for various purposes including molecular typing, classification and phylogenetic analysis. The `FastaNGS` pipeline processes NGS data to obtain short variants (SNVs and INDELs). This pipeline implements tools for raw data quality control and pre-processing, read mapping, variant calling and filtering to produce a ready to use vcf and multiple sequence alignment files. The FastaNGS pipeline includes workflow of GATK Best Practices for germline short variant discovery, [link](https://gatk.broadinstitute.org/hc/en-us/articles/360035535932-Germline-short-variant-discovery-SNPs-Indels-), which allows users to work on large datasets. In addition to the GATK Best Practices, FastaNGS includes a step to parse the SNV table into a multiple sequence alignment in fasta format. (`FastaNGS` runs well under Linux OS and MacOSX; for Windows users `FastaNGS` also runs well under linux in a virtual machine or Windows subsystem for linux)
 
 ## Inputs
 <br>The pipeline needs the following files as the inputs
@@ -26,28 +26,28 @@ pos.txt | position of polymorphic sites corresponding positions in the reference
 
 ## Installation and usage
 1. Install dependencies listed in `table 1`.
-2. Download the `tuber` pipeline scripts.
+2. Download the `FastaNGS` pipeline scripts.
      ```sh
-     $ git clone https://github.com/b600a/tuber.git
-     $ cd tuber
+     $ git clone https://github.com/CENMIG/FastaNGS.git
+     $ cd FastaNGS
      ```
-3. Specify paths and parameters for `nextflow` (listed in `table 2`) in the `tuber.sh` file using text editor.
+3. Specify paths and parameters for `nextflow` (listed in `table 2`) in the `FastaNGS.sh` file using text editor.
     <br>Example:
     ```sh
-     nextflow run tuber.sh -resume --ref '/home/bb/ref/ref.fasta' --reads '/home/bb/reads/*_{1,2}.fastq.gz' --results /home/bb/output_here/ --ref_genome 'NC_000962.3' --stop 'true'
+     nextflow run FastaNGS.sh -resume --ref '/home/bb/ref/ref.fasta' --reads '/home/bb/reads/*_{1,2}.fastq.gz' --results /home/bb/output_here/ --ref_genome 'NC_000962.3' --stop 'true'
      ```
 4. Lauch the pipeline execution with the following command:
      ```sh
-     $ ./tuber.sh
+     $ ./FastaNGS.sh
 	or
-	$ sh tuber.sh
+	$ sh FastaNGS.sh
      ```
      
-     <br> Paramters that you have specified, and and processes and its progress will be shown as figure below. For more details on how `tuber` works, please find next section.
+     <br> Paramters that you have specified, and and processes and its progress will be shown as figure below. For more details on how `FastaNGS` works, please find next section.
      ```sh
      N E X T F L O W  ~  version 20.07.1
      Launching `main.nf` [ridiculous_lorenz] - revision: f29238c695
-     tuber v0.2
+     FastaNGS v0.2
      ====================================================
      Location of reference genome file: /home/bb_20/ref/ref.fasta
      Reference regenome name: NC_000962.3
@@ -77,12 +77,12 @@ pos.txt | position of polymorphic sites corresponding positions in the reference
      [-        ] process > VCF_TO_FASTA                    -			`				
 
      ```
-     <br>Once the run has finised, `tuber` will report duration time that was used (Example shown below). The pipeline will generate cache files in directory `/tuber/work/`, you can delete this directory.
+     <br>Once the run has finised, `FastaNGS` will report duration time that was used (Example shown below). The pipeline will generate cache files in directory `/FastaNGS/work/`, you can delete this directory.
 
     ```sh
      N E X T F L O W  ~  version 20.07.1
      Launching `main.nf` [ridiculous_lorenz] - revision: f29238c695
-     tuber v0.2
+     FastaNGS v0.2
      ====================================================
      Location of reference genome file: /home/bb_20/ref/ref.fasta
      Reference regenome name: NC_000962.3
@@ -118,7 +118,7 @@ pos.txt | position of polymorphic sites corresponding positions in the reference
 
      Time used: 00:00:00
      ```
-## The tuber pipeline will perform the followings:
+## The FastaNGS pipeline will perform the followings:
 
 #### 1. Preprocessing raw reads
 `Trimmomatic` will be used for clipping Illumina adapters and trimming low quality (sequences in the) reads. Reads that are shorter than the defined length will be dropped. By default it is set as: -PE -phred33, ILLUMINACLIP:TruSeq3-PE.fa:2:30:10, SLIDINGWINDOW:4:30, MINLEN:70
@@ -128,10 +128,10 @@ pos.txt | position of polymorphic sites corresponding positions in the reference
 Processed reads will be aligned to the reference genome sequence with `BWA MEM`. Default is set as: -c 100 -M -T 50. SAM files will be converted into BAM files by `Samtools` and duplicate reads will be marked by `Picard`. Average depth and genome coverage of each sample are calculated from BAM using Samtools, results will be parsed into coverage.tsv file in bam/ in output directory.
 
 #### 3. Per-sample variant calling
-`GATK HaplotypeCaller` will use BAM files as input for calling short variants (SNVs and INDELs) in GVCF mode. Default options are set as minimum base quality 20 and ploidy 1. This step will generate an intermediate file (GVCF) per-sample, which will be used for joint genotyping to produce a final multi-sample VCF file. A list of GVCF files generated will be parsed into tab-delimited text file (named as sample_map.txt) in the input directory. By default tuber will proceed to the next step, all samples will be imported into the workspace for joint genotyping. You can also choose to stop tuber at this step by specifying --stop true in tuber.sh file. You can check the results of MultiQC (HTML reports) and Samtools (coverage.tsv) to select only samples that meet the criteria (e.g. minimum read quality, minimum mean depth, minimum genome coverage) before joint-genotyping. If this parameter is left as default setting, tuber will proceed to step 4.
+`GATK HaplotypeCaller` will use BAM files as input for calling short variants (SNVs and INDELs) in GVCF mode. Default options are set as minimum base quality 20 and ploidy 1. This step will generate an intermediate file (GVCF) per-sample, which will be used for joint genotyping to produce a final multi-sample VCF file. A list of GVCF files generated will be parsed into tab-delimited text file (named as sample_map.txt) in the input directory. By default FastaNGS will proceed to the next step, all samples will be imported into the workspace for joint genotyping. You can also choose to stop FastaNGS at this step by specifying --stop true in FastaNGS.sh file. You can check the results of MultiQC (HTML reports) and Samtools (coverage.tsv) to select only samples that meet the criteria (e.g. minimum read quality, minimum mean depth, minimum genome coverage) before joint-genotyping. If this parameter is left as default setting, FastaNGS will proceed to step 4.
 
 #### 4. Consolidating GVCFs for joint-genotyping
-`GATK GenomicsDBImport` will create a GenomicsDB workspace and then import single-sample GVCFs into this workspace. GATK GenotypeGVCFs then will perform joint genotyping on GenomicsDB workspace to produce a multi-sample VCF. By default, `GenomicsDBImport` will read sample_map.txt to import all samples into the workspace. In case users have stopped the run after finishing step 3 for checking the results from steps 1 and 2 to exclude some problematic or low quality samples before proceeding to next steps. If you want to proceed to the next step without any change, use command ./sh tuber.sh to do so. But if users want to include only some samples, users will need to provide a tab-delimited text file in input directory (formatted as shown below and file must be named sample_map_usr.txt)
+`GATK GenomicsDBImport` will create a GenomicsDB workspace and then import single-sample GVCFs into this workspace. GATK GenotypeGVCFs then will perform joint genotyping on GenomicsDB workspace to produce a multi-sample VCF. By default, `GenomicsDBImport` will read sample_map.txt to import all samples into the workspace. In case users have stopped the run after finishing step 3 for checking the results from steps 1 and 2 to exclude some problematic or low quality samples before proceeding to next steps. If you want to proceed to the next step without any change, use command ./sh FastaNGS.sh to do so. But if users want to include only some samples, users will need to provide a tab-delimited text file in input directory (formatted as shown below and file must be named sample_map_usr.txt)
 
 			Sample_1 Sample_1.g.vcf.gz
 			Sample_2 Sample_2.g.vcf.gz
@@ -140,7 +140,7 @@ Processed reads will be aligned to the reference genome sequence with `BWA MEM`.
                     .         .
                     Sample_n  Sample_n.g.vcf.gz
 
-`GenomicsDBImport` then will automatically read sample_map_usr.txt file and import only samples that are listed into the workspace. After saving sample_map_usr.txt file to the input directory, execute command ./sh tuber.sh to start joint genotyping.
+`GenomicsDBImport` then will automatically read sample_map_usr.txt file and import only samples that are listed into the workspace. After saving sample_map_usr.txt file to the input directory, execute command ./sh FastaNGS.sh to start joint genotyping.
 										
 #### 5. Variant filtering
 By default, INDELS will be filtered with `GATK SelectVariants` (-select-type SNP). Remaining SNVs will be filtered by `GATK VariantsFiltration` with filter settings: QD < 2.0 || MQ < 40.0 (Filtered VCF file will be generated in vcf_joint directory in output directory (named as joint_filtered.vcf.gz)
@@ -181,7 +181,7 @@ Paths/Paramter | Paramter name | Default
 `params.selectvariant_option` | parameter for variant filtering (SelectVariants) | `--exclude-filtered -select-type SNP`
 `params.stop` | optional stop after step 3 (per-sample variant call) | `false`
 
-## Quick installation of `tuber`'s dependencies
+## Quick installation of `FastaNGS`'s dependencies
 #### 1. Install `homebrew` and `homebrew/science/bio` (bioinformatic fomulae)
 <br>     1.1 Install `curl` and `git`:
           ``` 
@@ -212,7 +212,7 @@ Paths/Paramter | Paramter name | Default
           $ brew tap brewsci/bio 
           ```
      
-#### 2. Install dependencies for `tuber` ( using `homebrew`) by using the following command:
+#### 2. Install dependencies for `FastaNGS` ( using `homebrew`) by using the following command:
 
      
      $ brew install nextflow \
@@ -228,7 +228,7 @@ Paths/Paramter | Paramter name | Default
 
      2.1 Launch `nexflow` to install its dependencies by running `$ nextflow`
      
-#### 3. Install another dependency for `tuber` using `pip`:
+#### 3. Install another dependency for `FastaNGS` using `pip`:
         
         $ pip3 install multiqc
         
@@ -238,5 +238,5 @@ Paths/Paramter | Paramter name | Default
 
 
 # Schematic outline
-![Image of Yaktocat](https://github.com/b600a/tuber/blob/master/figures/tuber.png)
+![Image of Yaktocat](https://github.com/CENMIG/FastaNGS/blob/master/figures/tuber.png)
 

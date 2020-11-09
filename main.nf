@@ -29,9 +29,9 @@ nextflow.enable.dsl = 2
  * Define the default parameters
  */
 // paths & inputs
-baseDir          = "$HOME/proj/pipeline"
-params.ref_genome    = "$baseDir/data/reference/ref.fasta"
-params.reads     = "$baseDir/data/reads/*_{1,2}.fastq.gz"
+baseDir          = "$HOME/"
+params.ref_genome    = "$baseDir/ref/reference.fasta"
+params.reads     = "$baseDir/reads/*_{1,2}.fastq.gz"
 params.results   = "$baseDir/results"
 params.adapter   = "$baseDir/data/adapters"
 params.ref_genome_name = "NC_000962.3"

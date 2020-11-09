@@ -13,7 +13,7 @@
 
 
 /* 
- * 'tuber' - A Nextflow pipeline for variant calling from NGS data
+ * 'FastaNGS' - A Nextflow pipeline for variant calling from NGS data
  * 
  * Yuttapong Thawornwattana
  * Bharkbhoom Jaemsai
@@ -58,7 +58,7 @@ params.stop = false
 
 
 log.info """\
-tuber v0.2
+FastaNGS v0.2
 ========================================================
 Reference genome sequence: $params.ref_genome
 Reference genome name: $params.ref_genome_name

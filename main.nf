@@ -13,7 +13,7 @@
 
 
 /* 
- * 'FastaNGS' - A Nextflow pipeline for variant calling from NGS data
+ * 'snpplet' - A Nextflow pipeline for variant calling from NGS data
  * 
  * Yuttapong Thawornwattana
  * Bharkbhoom Jaemsai
@@ -58,7 +58,7 @@ params.stop = false
 
 
 log.info """\
-FastaNGS v0.2
+snpplet v0.2
 ========================================================
 Reference genome sequence: $params.ref_genome
 Reference genome name: $params.ref_genome_name

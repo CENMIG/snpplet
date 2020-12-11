@@ -14,6 +14,24 @@ Whole genome sequencing data are used for various purposes including molecular t
 2. Reference genome sequence (fasta format)
 
 
+## Outputs
+
+The pipeline will generate outputs in five subdirectories under the directory `results`. Here is a brief description of output files.
+
+Directory | Files  | Description
+--------- | ------ | -----------
+`multiqc_fastqc` | `before.html` | Report of the quality of raw reads of all input samples
+`multiqc_fastqc` | `after.html` | Report of the quality of processed reads of all input samples after trimming using Trimmomatic
+`bam` | `<sample>.bam`, `<sample>.bam.bai` | Per-sample mapped read files in BAM format and corresponding index files (`.bai`)
+`bam` | `coverage.tsv`  | Summary table of mean depth and genomic coverage from `samtools coverage`
+`vcf` | `<sample>.g.vcf.gz`, `<sample>.g.vcf.gz.tbi` | Per-sample vcf (in gvcf format) and index files
+`vcf_joint` | `joint_filtered.vcf.gz`, `joint_filtered.vcf.gz.tbi` | Analysis-ready multi-sample vcf of high-quality SNPs
+`vcf_joint` | `joint_filtered_stats.txt` | Summary statistics of the vcf file `joint_filtered.vcf.gz`
+`aln` | `aln.fasta` | Multiple sequence alignment (MSA) in fasta format
+`aln` | `pos.txt` | List SNP positions in the reference genome corrdinates
+
+
+
 ## Installation and usage
 
 `snpplet` is designed and developed under Linux systems and MacOSX. For Windows users, please use a virtual machine or Windows subsystem for Linux.
@@ -113,24 +131,6 @@ Whole genome sequencing data are used for various purposes including molecular t
 
      Time used: 00:00:00
      ```
-
-
-## Outputs
-
-The pipeline will generate outputs in five subdirectories under the directory `results`. Here is a brief description of output files.
-
-Directory | Files  | Description
---------- | ------ | -----------
-`multiqc_fastqc` | `before.html` | Report of the quality of raw reads of all input samples
-`multiqc_fastqc` | `after.html` | Report of the quality of processed reads of all input samples after trimming using Trimmomatic
-`bam` | `<sample>.bam`, `<sample>.bam.bai` | Per-sample mapped read files in BAM format and corresponding index files (`.bai`)
-`bam` | `coverage.tsv`  | Summary table of mean depth and genomic coverage from `samtools coverage`
-`vcf` | `<sample>.g.vcf.gz`, `<sample>.g.vcf.gz.tbi` | Per-sample vcf (in gvcf format) and index files
-`vcf_joint` | `joint_filtered.vcf.gz`, `joint_filtered.vcf.gz.tbi` | Analysis-ready multi-sample vcf of high-quality SNPs
-`vcf_joint` | `joint_filtered_stats.txt` | Summary statistics of the vcf file `joint_filtered.vcf.gz`
-`aln` | `aln.fasta` | Multiple sequence alignment (MSA) in fasta format
-`aln` | `pos.txt` | List SNP positions in the reference genome corrdinates
-
 
 
 ## Steps in the `snpplet` pipeline

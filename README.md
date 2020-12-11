@@ -19,8 +19,8 @@ Whole genome sequencing data are used for various purposes including molecular t
 
 The pipeline will generate outputs in five subdirectories under the directory `results`. Here is a brief description of output files.
 
-Directory| Files | Description
------- | ------ 
+Directory | Files  | Description
+--------- | ------ | -----------
 `multiqc_fastqc` | `before.html` | Report of the quality of raw reads of all input samples
 `multiqc_fastqc` | `after.html` | Report of the quality of processed reads of all input samples after trimming using Trimmomatic
 `bam` | `<sample>.bam`, `<sample>.bam.bai` | Per-sample mapped read files in BAM format and corresponding index files (`.bai`)
@@ -36,14 +36,16 @@ Directory| Files | Description
 
 `snpplet` is designed and developed under Linux systems and MacOSX. For Windows users, please use a virtual machine or Windows subsystem for Linux.
 
-1. Install dependencies listed in `Table 1`.
+1. Install dependencies listed in __Table 1__.
 2. Download `snpplet`.
+
      ```sh
      $ git clone https://github.com/CENMIG/snpplet.git
      $ cd snpplet
      ```
-3. Specify paths and parameters (see `Table 2`) in the `snpplet.sh` file using text editor.
+3. Specify paths and parameters (see __Table 2__ below) in the `snpplet.sh` file using text editor.
     <br>Example:
+
     ```sh
      nextflow run snpplet.sh -resume --ref_genome 'ref/ref.fasta' --reads 'reads/*_{1,2}.fastq.gz' --results 'results' --ref_genome_name 'NC_000962.3' --stop 'true'
      ```
@@ -171,33 +173,35 @@ Finally, the filtered VCF file `joint_filtered.vcf.gz` is processed to produce a
 
 
 ### Table 1 - Dependencies
-* Nextflow (v20.07 or later)
-* FastQC
-* MultiQC
-* Trimmomatic
-* BWA
-* Samtools
-* BCFtools
-* GATK (v4.1.8.1 or later)
-* Datamash
-* Java (for Nextflow and GATK)
+
+* [Nextflow](https://www.nextflow.io/) (v20.07 or later)
+* [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
+* [MultiQC](https://multiqc.info/)
+* [Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic)
+* [BWA](http://bio-bwa.sourceforge.net/)
+* [Samtools](http://www.htslib.org/)
+* [BCFtools](http://www.htslib.org/)
+* [GATK](https://gatk.broadinstitute.org/hc/en-us) (v4.1.8.1 or later)
+* [Datamash](https://www.gnu.org/software/datamash/)
+* Java for Nextflow and GATK. Please check specific requirements for Nextflow and GATK.
 
 
 ### Table 2 - Arguments (paths and parameters)
-Argument | Paramter name | Default
------- | ------ | ------
+
+Argument | Description   | Default value
+-------- | ------------- | -------------
 `--reads` | the location of the read fastq files | `reads/*_{1,2}.fastq.gz`
 `--ref_genome` | the location of the read fastq files | `ref/reference.fasta`
-`--results` | the location where the results will be stored |  `results/`
+`--results` | the location where the results will be stored |  `results`
 `--ref_genome_name` | genome name | `NC000962.3`
-`--trimming_option` | parameter for trimming (Trimmomatic) | `SLIDINGWINDOW:4:30 MINLEN:70`
-`--mapping_option` | parameter for read mapping (BWA) | `-c 100 -M -T 50`
-`--haplotypecaller_option` | parameter for per-sample variant calling (GATK HaplotypeCaller) | `-ploidy 1 -mbq 20`
-`--genomicsdbimport_option` | parameter for joint (GATK GenomicsDBImport) | `test`
-`--genotypegvcfs_option` | parameter for joint (GATK GenotypeGVCFs) | `test`
-`--variant_filter` | parameter for variant filtering (GATK VariantsFiltration) |  `QD < 2.0` `MQ < 40.0`
-`--variant_filter_name` | name of the variant filter | `qd-mq`
-`--selectvariant_option` | parameter for selecting variants (GATK SelectVariants) | `--exclude-filtered -select-type SNP`
+`--trimming_option` | parameter for trimming (Trimmomatic) | `"SLIDINGWINDOW:4:30 MINLEN:70"`
+`--mapping_option` | parameter for read mapping (BWA) | `"-c 100 -M -T 50"`
+`--haplotypecaller_option` | parameter for per-sample variant calling (GATK HaplotypeCaller) | `"-ploidy 1 -mbq 20"`
+`--genomicsdbimport_option` | parameter for joint (GATK GenomicsDBImport) | `"--batch-size 200"`
+`--genotypegvcfs_option` | parameter for joint (GATK GenotypeGVCFs) | `"-ploidy 1"`
+`--variant_filter` | parameter for variant filtering (GATK VariantsFiltration) |  `"QD < 2.0 || MQ < 40.0"`
+`--variant_filter_name` | name of the variant filter | `"qd-mq"`
+`--selectvariant_option` | parameter for selecting variants (GATK SelectVariants) | `"--exclude-filtered -select-type SNP"`
 `--stop` | whether to pause after step 3 (per-sample variant calling) | `false`
 
 
@@ -209,45 +213,45 @@ For Linux systems using bash shell.
 
 1.1 Install `curl` and `git`:
 
-          ```
+          
           $ sudo apt-get update
-          ```
+          
 
 1.2 Install [`homebrew`](https://brew.sh/):
 
-         ```
+         
          $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)" 
-         ```
+         
 
 1.2.1 Set `$PATH`:
 
-         ```
+         
          $ echo 'eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)' >> /home/user/.profile 
-         ```
+         
 
 1.2.2 Evaluate `.profile`:
 
-         ```
+         
          $ eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv) 
-         ```
+         
 
 1.3 Install `build-essential`:
 
-          ```
+          
           $ sudo apt-get install build-essential 
-          ```
+          
 
 1.4 Install `gcc`:
 
-          ```
+        
           $ brew install gcc 
-          ```
+          
 
 1.5 Tap `brewsci/bio`:
 
-          ```
+          
           $ brew tap brewsci/bio 
-          ```
+          
 
 #### 2. Install dependencies for `snpplet` via `homebrew`
 

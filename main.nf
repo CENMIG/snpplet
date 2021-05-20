@@ -1,4 +1,3 @@
-testing
 /*
  * Copyright (c) 2020
  * Center for Microbial Genomics, Mahidol University

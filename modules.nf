@@ -183,7 +183,9 @@ process READ_MAPPING_BWA {
       val(id), \
       path("markdup.bam"), \
       path("markdup.bam.bai")
+    path "${id}_flagstat.txt"
     path "${id}_coverage.txt"
+    path "${id}_depth.txt"
 
   """
   # read mapping
@@ -202,33 +204,91 @@ process READ_MAPPING_BWA {
   # index BAM file
   samtools index markdup.bam
 
-  # depth
-  samtools coverage markdup.bam > coverage.txt
 
-  sed "s/${ref_genome_name}/$id/;s/#rname/id/" coverage.txt > ${id}_coverage.txt
+  # flagstat
+ 
+ samtools flagstat -O tsv markdup.bam > flagstat.txt
+ cut -f1,2 flagstat.txt | sed 's/[\t]/ + /g' | sed "1i\\$id" | datamash transpose > ${id}_flagstat.txt
+ 
+
+  # coverage
+
+ samtools coverage markdup.bam > coverage.txt
+ sed "s/${ref_genome_name}/$id/;s/#rname/id/" coverage.txt > ${id}_coverage.txt
+  
+  # depth
+
+ samtools depth -a markdup.bam > depth.txt
+ sed "s/${ref_genome_name}/$id/" depth.txt | awk '{c++; if(\$3>0) {l+=1; d+=\$3}}END{print (\$1, l/c*100, d/c, d/l)}' > ${id}_depth.txt
+
+ 
   
   # free up some disk space
-  rm sam bam_fixmate bam_sort coverage.txt
+  rm sam bam_fixmate bam_sort
   """
 }
 
 
 /*
- * Step 2b: Combine per-sample coverage info into a single file
+ * Step 2b: Combine per-sample flagstat results info into a single file
+ */
+process FLAGSTAT_OUTPUT {
+  publishDir "$params.results/bam", mode: 'copy'
+
+  input:
+    path flagstat
+
+  output:
+    path "flagstat.tsv"
+
+  """
+  
+  awk '(NR>0)' $flagstat | sed '1iid\ttotal (QC-passed reads + QC-failed reads)\tsecondary\tsupplementary\tduplicates\tmapped\tmapped %\tpaired in sequencing\tread1\tread2\tproperly paired\tproperly paired %\twith itself and mate mapped\tsingletons\tsingletons %\twith mate mapped to a different chr\twith mate mapped to a different chr\twith mate mapped to a different chr (mapQ>=5)' $flagstat > flagstat.tsv
+  """
+
+}
+
+/*
+ * Step 2c: Combine per-sample coverage info into a single file
  */
 process COVERAGE_OUTPUT {
   publishDir "$params.results/bam", mode: 'copy'
 
   input:
     path coverage
+  
 
   output:
     path "coverage.tsv"
+    
+    
 
   """
   awk '(NR == 1) || (FNR > 1)' $coverage > coverage.tsv
+  
   """
 }
+
+/*
+ * Step 2d: Combine per-sample depth info into a single file
+ */
+process DEPTH_OUTPUT {
+  publishDir "$params.results/bam", mode: 'copy'
+
+  input:
+    path depth
+
+
+  output:
+    path "depth.tsv"
+
+  """
+  
+ awk '(NR>0)' $depth | sed -e '1iid\tcoverage\tdepth across all positions\tdepth across mapped positions' $depth > depth.tsv
+
+  """
+}
+
 
 
 /*

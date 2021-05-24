@@ -86,7 +86,9 @@ include {
   FASTQC_AFTER_TRIM;
   MULTIQC_FASTQC_AFTER_TRIM;
   READ_MAPPING_BWA;
+  FLAGSTAT_OUTPUT;
   COVERAGE_OUTPUT;
+  DEPTH_OUTPUT;    
   CALL_VARIANTS;
   CREATE_SAMPLE_MAP;
   JOINT_GENOTYPING;
@@ -131,8 +133,12 @@ workflow {
     params.mapping_option)
 
   // Report per-sample depth and coverage statistics
-  COVERAGE_OUTPUT(
+    FLAGSTAT_OUTPUT(
     READ_MAPPING_BWA.out[1].collect())
+    COVERAGE_OUTPUT(
+    READ_MAPPING_BWA.out[2].collect())
+    DEPTH_OUTPUT(
+    READ_MAPPING_BWA.out[3].collect())
 
   // STEP 3: Per-sample variant calling using GATK HaplotypeCaller
   CALL_VARIANTS(

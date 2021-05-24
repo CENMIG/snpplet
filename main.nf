@@ -32,7 +32,7 @@ nextflow.enable.dsl = 2
 baseDir          = "$HOME"
 params.ref_genome    = "$baseDir/ref/ref.fasta"
 params.reads     = "$baseDir/reads/*_{1,2}.fastq.gz"
-params.results   = "$baseDir/results_finaltest_May21"
+params.results   = "$baseDir/results"
 params.adapter   = "$baseDir/data/adapters"
 params.ref_genome_name = "NC_000962.3"
 

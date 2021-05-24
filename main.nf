@@ -30,7 +30,7 @@ nextflow.enable.dsl = 2
  */
 // paths & inputs
 baseDir          = "$HOME"
-params.ref_genome    = "$baseDir/ref/ref.fasta"
+params.ref_genome    = "$baseDir/ref/reference.fasta"
 params.reads     = "$baseDir/reads/*_{1,2}.fastq.gz"
 params.results   = "$baseDir/results"
 params.adapter   = "$baseDir/data/adapters"

@@ -273,3 +273,4 @@ Launch `nexflow` to install its dependencies by running `nextflow`
 # Schematic outline
 ![workflow](https://github.com/CENMIG/snpplet/blob/master/figures/steps.png)
 
+You can cite the snpplet zenodo record for a specific release using the following [![DOI](https://zenodo.org/badge/310209417.svg)](https://zenodo.org/badge/latestdoi/310209417)
